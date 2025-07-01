@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -std=c23 -Wall -Wextra -O2
+CFLAGS = -std=c23 -Wall -Wextra -O0
 
 SRC = main.c bitcask.c kv.c
 OBJ = $(SRC:.c=.o)
