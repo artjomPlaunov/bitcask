@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -std=c23 -Wall -Wextra -O0
 
-SRC = main.c bitcask.c kv.c
+SRC = main.c bitcask.c kv.c keydir.c
 OBJ = $(SRC:.c=.o)
 TARGET = bitcask
 

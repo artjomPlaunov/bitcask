@@ -10,6 +10,7 @@
 #include "limits.h"
 #include <arpa/inet.h>
 #include <time.h>
+#include "keydir.h"
 
 #define FNAME_PREFIX ".data"
 #define ACTIVE ".active"
@@ -48,6 +49,17 @@ int get_next_file_id(const char *directory) {
     return max_id + 1;
 }
 
+char* path_append(char *path, char * suffix) {
+    size_t path_len = strlen(path) + 1 + strlen(suffix) + 1;
+    char* new_path = malloc(path_len);
+    if (!path) {
+        fprintf(stderr, "path_append: failed");
+        return NULL;
+    }
+    snprintf(new_path, path_len, "%s/%s", path, suffix);
+    return new_path;
+}
+
 Bitcask *bitcask_open(const char *directory) {
     
     // note -- should I implement some max directory length check here,
@@ -80,21 +92,22 @@ Bitcask *bitcask_open(const char *directory) {
         return NULL;
     } 
     
-    size_t path_len = strlen(directory) + 1 + strlen(ACTIVE) + 1;
-    char* active_path = malloc(path_len);
+    char* active_path = path_append(bc->directory, ACTIVE);
     if (!active_path) {
         fprintf(stderr, "Failed to allocate memory for file path");
         bitcask_close(bc);
         return NULL;
     }
-    snprintf(active_path, path_len, "%s/%s", directory, ACTIVE);
+    printf("%s\n", active_path);
     int fd = open(active_path, O_RDWR | O_CREAT | O_APPEND, 0644);
     if (fd == -1) {
+        printf("here\n");
         bitcask_close(bc);
         return NULL;
     }
     bc->active_file = fd;
     bc->active_path = active_path;
+    bc->max_id = get_next_file_id(bc->directory);
     printf("%s\n", active_path);
 
     printf("Bitcask opened at: %s\n", directory);
@@ -102,19 +115,40 @@ Bitcask *bitcask_open(const char *directory) {
     return bc;
 }
 
+
+
+// -1 return means error
+// 0 return means no error, and val is null if not found.
+int bitcask_get(Bitcask *bc, Key *key, Value *val) {
+    Metadata *m = keydir_get(key->key, key->key_len);
+    uint64_t offset = 4 + 4 + 2 + 4 + key->key_len;
+    lseek(bc->active_file, (m->offset) + offset, SEEK_SET);
+    val->val_len = m->value_sz;
+    val->val = malloc(val->val_len);
+    read(bc->active_file, val->val, val->val_len);
+    return 0;
+}
+
 int bitcask_put
 (Bitcask *bc, Kv* kv) {
     uint16_t key_len_be = htons(kv->key->key_len);
     uint32_t val_len_be = htonl(kv->val->val_len);
     time_t now = htonl(time(NULL));
+    uint64_t offset = lseek(bc->active_file, 0, SEEK_CUR);
     int crc = htonl(69);
     write(bc->active_file, &crc, 4);
     write(bc->active_file, &now, 4);
     write(bc->active_file, &key_len_be, 2);
     write(bc->active_file, &val_len_be, 4);
-
     write(bc->active_file, kv->key->key, kv->key->key_len);
     write(bc->active_file, kv->val->val, kv->val->val_len);
+    Metadata m = {
+        .file_id = bc->max_id, 
+        .value_sz = kv->val->val_len, 
+        .offset=offset, 
+        .timestamp=now
+    };
+    keydir_put(kv->key->key, kv->key->key_len, m);
     return 0;
 }
 
