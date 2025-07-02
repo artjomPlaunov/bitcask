@@ -9,7 +9,8 @@ int main(void) {
         return 1;
     }
 
-    Kv *kv = kv_create((const uint8_t *)"hello", 5, (const uint8_t *)"world", 5);
+    Kv *kv = kv_create((const uint8_t *)"hello", 5, (const uint8_t *)"world12345678", 13);
+    bitcask_put(db, kv);
     kv_close(kv);
     bitcask_close(db);
     return 0;
