@@ -104,16 +104,17 @@ Bitcask *bitcask_open(const char *directory) {
 
 int bitcask_put
 (Bitcask *bc, Kv* kv) {
-    uint16_t key_len_be = htons(kv->key_len);
-    uint32_t val_len_be = htonl(kv->val_len);
+    uint16_t key_len_be = htons(kv->key->key_len);
+    uint32_t val_len_be = htonl(kv->val->val_len);
     time_t now = htonl(time(NULL));
     int crc = htonl(69);
     write(bc->active_file, &crc, 4);
     write(bc->active_file, &now, 4);
     write(bc->active_file, &key_len_be, 2);
     write(bc->active_file, &val_len_be, 4);
-    write(bc->active_file, kv->key, kv->key_len);
-    write(bc->active_file, kv->val, kv->val_len);
+
+    write(bc->active_file, kv->key->key, kv->key->key_len);
+    write(bc->active_file, kv->val->val, kv->val->val_len);
     return 0;
 }
 
