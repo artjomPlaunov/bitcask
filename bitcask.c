@@ -12,14 +12,14 @@
 #include <time.h>
 #include "keydir.h"
 
-#define FNAME_PREFIX ".data"
+#define DATA ".data"
 #define ACTIVE ".active"
 #define MAX_SIZE 100
 
 struct Bitcask {
     char *directory;
     char *active_path;
-    int max_id;
+    uint32_t max_id;
     int active_file;
 };
 
@@ -33,8 +33,8 @@ int get_next_file_id(const char *directory) {
     int max_id = -1;
     while ((entry = readdir(dir)) != NULL) {
         const char *name = entry->d_name;
-        if (strncmp(name, FNAME_PREFIX, strlen(FNAME_PREFIX)) == 0) {
-            const char *start = name + strlen(FNAME_PREFIX);
+        if (strncmp(name, DATA, strlen(DATA)) == 0) {
+            const char *start = name + strlen(DATA);
             char *end;
             long id = strtol(start, &end, 10);
             if (*end == '\0' && id >= 0 && id <= INT_MAX) {
@@ -58,6 +58,14 @@ char* path_append(char *path, char * suffix) {
     }
     snprintf(new_path, path_len, "%s/%s", path, suffix);
     return new_path;
+}
+
+char* get_data_path(Bitcask *bc, int id) {
+    size_t len = snprintf(NULL, 0, "%s/%s%d", bc->directory, DATA, id);
+    char *output = malloc(len+1);
+    if (!output) return NULL;
+    snprintf(output, len+1, "%s/%s%d", bc->directory, DATA, id);
+    return output;
 }
 
 Bitcask *bitcask_open(const char *directory) {
@@ -98,7 +106,6 @@ Bitcask *bitcask_open(const char *directory) {
         bitcask_close(bc);
         return NULL;
     }
-    printf("%s\n", active_path);
     int fd = open(active_path, O_RDWR | O_CREAT | O_APPEND, 0644);
     if (fd == -1) {
         printf("here\n");
@@ -108,10 +115,8 @@ Bitcask *bitcask_open(const char *directory) {
     bc->active_file = fd;
     bc->active_path = active_path;
     bc->max_id = get_next_file_id(bc->directory);
-    printf("%s\n", active_path);
 
     printf("Bitcask opened at: %s\n", directory);
-    printf("next file id: %d\n", get_next_file_id(directory));
     return bc;
 }
 
@@ -122,15 +127,25 @@ Bitcask *bitcask_open(const char *directory) {
 int bitcask_get(Bitcask *bc, Key *key, Value *val) {
     Metadata *m = keydir_get(key->key, key->key_len);
     uint64_t offset = 4 + 4 + 2 + 4 + key->key_len;
-    lseek(bc->active_file, (m->offset) + offset, SEEK_SET);
+    int fd = -1;
+    int is_old_file = 0;
+    if (m->file_id == bc->max_id) {
+        fd = bc->active_file;
+    } else {
+        // set to true so we know to close fd later.  
+        is_old_file = 1;
+        char *data_path = get_data_path(bc, m->file_id);
+        fd = open(data_path, O_RDONLY);
+    }
+    lseek(fd, (m->offset) + offset, SEEK_SET);
     val->val_len = m->value_sz;
     val->val = malloc(val->val_len);
-    read(bc->active_file, val->val, val->val_len);
+    read(fd, val->val, val->val_len);
+    if (is_old_file) close(fd);
     return 0;
 }
 
-int bitcask_put
-(Bitcask *bc, Kv* kv) {
+int bitcask_put(Bitcask *bc, Kv* kv) {
     uint16_t key_len_be = htons(kv->key->key_len);
     uint32_t val_len_be = htonl(kv->val->val_len);
     time_t now = htonl(time(NULL));

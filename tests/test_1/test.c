@@ -1,12 +1,12 @@
 #include <assert.h>
 #include <string.h>
 #include <stdint.h>
-#include "bitcask.h"
+#include "../../bitcask.h"
 #include <stdio.h>
-#include "keydir.h"
+#include "../../keydir.h"
 
 int main(void) {
-    Bitcask *db = bitcask_open("./data");
+    Bitcask *db = bitcask_open("./tests/test_1/data");
     if (!db) {
         fprintf(stderr, "Failed to open Bitcask\n");
         return 1;
