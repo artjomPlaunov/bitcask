@@ -14,7 +14,7 @@
 
 #define DATA ".data"
 #define ACTIVE ".active"
-#define MAX_SIZE 40
+#define MAX_SIZE 1000
 
 struct Bitcask {
     char *directory;
@@ -130,12 +130,13 @@ int bitcask_get(Bitcask *bc, Key *key, Value *val) {
     uint64_t offset = 4 + 4 + 2 + 4 + key->key_len;
     int fd = -1;
     int is_old_file = 0;
+    char *data_path;
     if (m->file_id == bc->max_id) {
         fd = bc->active_file;
     } else {
         // set to true so we know to close fd later.  
         is_old_file = 1;
-        char *data_path = get_data_path(bc, m->file_id);
+        data_path = get_data_path(bc, m->file_id);
         fd = open(data_path, O_RDONLY);
     }
     lseek(fd, (m->offset) + offset, SEEK_SET);
@@ -147,7 +148,10 @@ int bitcask_get(Bitcask *bc, Key *key, Value *val) {
         perror("read failed");
         return -1;
     }
-    if (is_old_file) close(fd);
+    if (is_old_file) {
+        close(fd);
+        free(data_path);
+    }
     return 0;
 }
 
@@ -167,7 +171,6 @@ int bitcask_put(Bitcask *bc, Kv* kv) {
     off_t cur_size = st.st_size;
     if (cur_size + len > MAX_SIZE) {
         char* data_path = get_data_path(bc, bc->max_id);
-        printf("Rotating file: %s -> %s\n", bc->active_path, data_path);
         rename(bc->active_path, data_path);
         free(data_path);
         close(fd);
@@ -179,8 +182,6 @@ int bitcask_put(Bitcask *bc, Kv* kv) {
         bc->active_file = fd;
         offset = 0;
         bc->max_id += 1;
-        printf("[bitcask_put] Rotated. New .active fd = %d\n", fd);
-
     }
 
     write(fd, buf, len);
