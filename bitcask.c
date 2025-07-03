@@ -14,7 +14,7 @@
 
 #define DATA ".data"
 #define ACTIVE ".active"
-#define MAX_SIZE 1000
+#define MAX_SIZE 30
 
 struct Bitcask {
     char *directory;
