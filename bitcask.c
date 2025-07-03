@@ -8,9 +8,9 @@
 #include <dirent.h>
 #include "bitcask.h"
 #include "limits.h"
-#include <arpa/inet.h>
 #include <time.h>
 #include "keydir.h"
+#include "kv.h"
 
 #define DATA ".data"
 #define ACTIVE ".active"
@@ -146,17 +146,14 @@ int bitcask_get(Bitcask *bc, Key *key, Value *val) {
 }
 
 int bitcask_put(Bitcask *bc, Kv* kv) {
-    uint16_t key_len_be = htons(kv->key->key_len);
-    uint32_t val_len_be = htonl(kv->val->val_len);
     time_t now = htonl(time(NULL));
     uint64_t offset = lseek(bc->active_file, 0, SEEK_CUR);
-    int crc = htonl(69);
-    write(bc->active_file, &crc, 4);
-    write(bc->active_file, &now, 4);
-    write(bc->active_file, &key_len_be, 2);
-    write(bc->active_file, &val_len_be, 4);
-    write(bc->active_file, kv->key->key, kv->key->key_len);
-    write(bc->active_file, kv->val->val, kv->val->val_len);
+
+    int fd = bc->active_file;
+    uint8_t *buf;
+    uint32_t len = kv_serialize(kv, &buf, now);
+    write(fd, buf, len);
+    free(buf);
     Metadata m = {
         .file_id = bc->max_id, 
         .value_sz = kv->val->val_len, 

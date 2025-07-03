@@ -1,8 +1,8 @@
-#include <stdint.h>
-#include "kv.h"
-
 #ifndef BITCASK_H
 #define BITCASK_H
+
+#include <stdint.h>
+#include "kv.h"
 
 typedef struct Bitcask Bitcask;
 
