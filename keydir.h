@@ -7,7 +7,7 @@
 
 typedef struct Metadata {
     uint32_t file_id;
-    uint32_t value_sz;
+    uint32_t val_len;
     uint64_t offset;
     uint64_t timestamp;
 } Metadata;
@@ -25,7 +25,7 @@ Metadata *keydir_get(uint8_t *key, size_t key_len);
 
 void keydir_delete(uint8_t *key, size_t key_len);
 
-void keydir_cleanup(void);
+void keydir_close(void);
 
 void keydir_print();
 

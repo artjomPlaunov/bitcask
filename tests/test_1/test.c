@@ -36,7 +36,7 @@ int main(void) {
     }
 
     bitcask_close(db);
-    keydir_cleanup();
+    keydir_close();
 
     printf("All tests passed.\n");
     return 0;

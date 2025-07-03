@@ -25,7 +25,7 @@ void keydir_print(void) {
 
         printf("\nfile_id    : %u\n", entry->meta.file_id);
         printf("offset     : %lu\n", entry->meta.offset);
-        printf("value_sz   : %u\n", entry->meta.value_sz);
+        printf("val_len   : %u\n", entry->meta.val_len);
         printf("timestamp  : %lu\n", entry->meta.timestamp);
         printf("--------------------------------\n");
     }
@@ -75,7 +75,7 @@ void keydir_delete(uint8_t *key, size_t key_len) {
     }
 }
 
-void keydir_cleanup(void) {
+void keydir_close(void) {
     Entry *entry, *tmp;
     HASH_ITER(hh, keydir, entry, tmp) {
         HASH_DEL(keydir, entry);

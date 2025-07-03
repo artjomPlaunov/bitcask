@@ -120,27 +120,27 @@ Bitcask *bitcask_open(const char *directory) {
     return bc;
 }
 
-
-
-// -1 return means error
-// 0 return means no error, and val is null if not found.
+// Return -1 is error.
+// Return 0 is no error. Result stored in val. 
+// If key is not present, val is unchanged (user should pass in NULL.)
 int bitcask_get(Bitcask *bc, Key *key, Value *val) {
-    //keydir_print();
     Metadata *m = keydir_get(key->key, key->key_len);
     uint64_t offset = 4 + 4 + 2 + 4 + key->key_len;
     int fd = -1;
     int is_old_file = 0;
     char *data_path;
+    // if file_id is max_id, read from active file. 
     if (m->file_id == bc->max_id) {
         fd = bc->active_file;
-    } else {
-        // set to true so we know to close fd later.  
+    // otherwise read from immutable data file. 
+    } else { 
         is_old_file = 1;
         data_path = get_data_path(bc, m->file_id);
         fd = open(data_path, O_RDONLY);
+        free(data_path);
     }
     lseek(fd, (m->offset) + offset, SEEK_SET);
-    val->val_len = m->value_sz;
+    val->val_len = m->val_len;
     val->val = malloc(val->val_len);
     
     ssize_t bytes_read = read(fd, val->val, val->val_len);
@@ -148,32 +148,37 @@ int bitcask_get(Bitcask *bc, Key *key, Value *val) {
         perror("read failed");
         return -1;
     }
+    // if we read from immutable data file, close fd. 
     if (is_old_file) {
         close(fd);
-        free(data_path);
     }
     return 0;
 }
 
 int bitcask_put(Bitcask *bc, Kv* kv) {
-    time_t now = htonl(time(NULL));
+    uint8_t *buf;
+    struct stat st;
+    time_t now = time(NULL);
+    time_t now_be = htonl(now);
     uint64_t offset = lseek(bc->active_file, 0, SEEK_CUR);
     int fd = bc->active_file;
-    uint8_t *buf;
-    uint32_t len = kv_serialize(kv, &buf, now);
-
-    struct stat st;
+    
     if (fstat(fd, &st) == -1) {
         perror("fstat failed");
         return -1; 
     }
-
     off_t cur_size = st.st_size;
+    uint32_t len = kv_serialize(kv, &buf, now_be);
+
+    // If the .active file is full, make it an immutable 
+    // .data file and reset .active to an empty file. 
     if (cur_size + len > MAX_SIZE) {
+        // rename .active to .dataN, for next N.
         char* data_path = get_data_path(bc, bc->max_id);
         rename(bc->active_path, data_path);
         free(data_path);
         close(fd);
+        // reopen .active
         fd = open(bc->active_path, O_RDWR | O_CREAT | O_APPEND | O_TRUNC, 0644);
         if (fd == -1) {
             perror("open failed");
@@ -183,12 +188,12 @@ int bitcask_put(Bitcask *bc, Kv* kv) {
         offset = 0;
         bc->max_id += 1;
     }
-
+    // In either case, fd is pointing to the current .active file.
     write(fd, buf, len);
     free(buf);
     Metadata m = {
         .file_id = bc->max_id, 
-        .value_sz = kv->val->val_len, 
+        .val_len = kv->val->val_len, 
         .offset=offset, 
         .timestamp=now
     };

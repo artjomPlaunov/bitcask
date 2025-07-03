@@ -61,7 +61,7 @@ int main(void) {
     }
 
     bitcask_close(db);
-    keydir_cleanup();
+    keydir_close();
 
     printf("Stress test passed: %d keys written and verified.\n", NUM_KEYS);
     return 0;
