@@ -14,7 +14,7 @@
 
 #define DATA ".data"
 #define ACTIVE ".active"
-#define MAX_SIZE 100
+#define MAX_SIZE 40
 
 struct Bitcask {
     char *directory;
@@ -125,6 +125,7 @@ Bitcask *bitcask_open(const char *directory) {
 // -1 return means error
 // 0 return means no error, and val is null if not found.
 int bitcask_get(Bitcask *bc, Key *key, Value *val) {
+    //keydir_print();
     Metadata *m = keydir_get(key->key, key->key_len);
     uint64_t offset = 4 + 4 + 2 + 4 + key->key_len;
     int fd = -1;
@@ -140,7 +141,12 @@ int bitcask_get(Bitcask *bc, Key *key, Value *val) {
     lseek(fd, (m->offset) + offset, SEEK_SET);
     val->val_len = m->value_sz;
     val->val = malloc(val->val_len);
-    read(fd, val->val, val->val_len);
+    
+    ssize_t bytes_read = read(fd, val->val, val->val_len);
+    if (bytes_read == -1) {
+        perror("read failed");
+        return -1;
+    }
     if (is_old_file) close(fd);
     return 0;
 }
@@ -148,10 +154,35 @@ int bitcask_get(Bitcask *bc, Key *key, Value *val) {
 int bitcask_put(Bitcask *bc, Kv* kv) {
     time_t now = htonl(time(NULL));
     uint64_t offset = lseek(bc->active_file, 0, SEEK_CUR);
-
     int fd = bc->active_file;
     uint8_t *buf;
     uint32_t len = kv_serialize(kv, &buf, now);
+
+    struct stat st;
+    if (fstat(fd, &st) == -1) {
+        perror("fstat failed");
+        return -1; 
+    }
+
+    off_t cur_size = st.st_size;
+    if (cur_size + len > MAX_SIZE) {
+        char* data_path = get_data_path(bc, bc->max_id);
+        printf("Rotating file: %s -> %s\n", bc->active_path, data_path);
+        rename(bc->active_path, data_path);
+        free(data_path);
+        close(fd);
+        fd = open(bc->active_path, O_RDWR | O_CREAT | O_APPEND | O_TRUNC, 0644);
+        if (fd == -1) {
+            perror("open failed");
+            return -1;
+        }
+        bc->active_file = fd;
+        offset = 0;
+        bc->max_id += 1;
+        printf("[bitcask_put] Rotated. New .active fd = %d\n", fd);
+
+    }
+
     write(fd, buf, len);
     free(buf);
     Metadata m = {

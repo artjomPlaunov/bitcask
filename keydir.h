@@ -27,5 +27,6 @@ void keydir_delete(uint8_t *key, size_t key_len);
 
 void keydir_cleanup(void);
 
+void keydir_print();
 
 #endif

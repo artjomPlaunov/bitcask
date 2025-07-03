@@ -5,6 +5,35 @@
 
 static Entry* keydir = NULL;  
 
+#include <stdio.h>  // add at top if not already there
+
+void keydir_print(void) {
+    Entry *entry, *tmp;
+    printf("======= keydir contents =======\n");
+
+    HASH_ITER(hh, keydir, entry, tmp) {
+        printf("Key (ascii): ");
+        for (size_t i = 0; i < entry->key_len; ++i) {
+            char c = entry->key[i];
+            putchar((c >= 32 && c <= 126) ? c : '.');  // print readable chars
+        }
+
+        printf("\nKey (hex)  : ");
+        for (size_t i = 0; i < entry->key_len; ++i) {
+            printf("%02x ", entry->key[i]);
+        }
+
+        printf("\nfile_id    : %u\n", entry->meta.file_id);
+        printf("offset     : %lu\n", entry->meta.offset);
+        printf("value_sz   : %u\n", entry->meta.value_sz);
+        printf("timestamp  : %lu\n", entry->meta.timestamp);
+        printf("--------------------------------\n");
+    }
+
+    printf("======= end of keydir ==========\n");
+}
+
+
 void keydir_put(uint8_t *key, size_t key_len, Metadata meta) {
     Entry *entry;
 
