@@ -24,7 +24,7 @@ void generate_key_value(size_t i, char *key, size_t klen, char **val, size_t *vl
 int main(void) {
     const char *dir = "./tests/test_2/data";
 
-    Bitcask *db = bitcask_open(dir);
+    Bitcask *db = bc_open(dir, 100);
     if (!db) {
         fprintf(stderr, "Failed to open Bitcask\n");
         return 1;
@@ -39,7 +39,7 @@ int main(void) {
         generate_key_value(i, key, sizeof(key), &val, &vlen);
         Kv *kv = kv_create((const uint8_t *)key, strlen(key), (const uint8_t *)val, vlen);
         assert(kv != NULL);
-        assert(bitcask_put(db, kv) == 0);
+        assert(bc_put(db, kv) == 0);
         kv_close(kv);
         free(val);
     }
@@ -52,7 +52,7 @@ int main(void) {
 
         Key k = {.key = (uint8_t *)key, .key_len = strlen(key)};
         Value val = {0};
-        assert(bitcask_get(db, &k, &val) == 0);
+        assert(bc_get(db, &k, &val) == 0);
         assert(val.val != NULL);
         assert(val.val_len == vlen);
         assert(memcmp(val.val, expected_val, vlen) == 0);
@@ -60,8 +60,7 @@ int main(void) {
         free(expected_val);
     }
 
-    bitcask_close(db);
-    keydir_close();
+    bc_close(db);
 
     printf("Stress test passed: %d keys written and verified.\n", NUM_KEYS);
     return 0;

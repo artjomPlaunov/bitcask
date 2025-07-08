@@ -19,14 +19,21 @@ typedef struct Entry {
     UT_hash_handle hh; 
 } Entry;
 
-void keydir_put(uint8_t *key, size_t key_len, Metadata meta);
+// opaque handle
+typedef struct Keydir {
+    Entry *entries;
+} Keydir;
 
-Metadata *keydir_get(uint8_t *key, size_t key_len);
+Keydir *keydir_create(void);
 
-void keydir_delete(uint8_t *key, size_t key_len);
+void keydir_put(Keydir *kd, uint8_t *key, size_t key_len, Metadata meta);
 
-void keydir_close(void);
+Metadata *keydir_get(Keydir *kd, uint8_t *key, size_t key_len);
 
-void keydir_print();
+void keydir_delete(Keydir *kd, uint8_t *key, size_t key_len);
+
+void keydir_close(Keydir *kd);
+
+void keydir_print(Keydir *kd);
 
 #endif

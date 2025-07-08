@@ -6,10 +6,11 @@
 
 typedef struct Bitcask Bitcask;
 
-Bitcask *bitcask_open(const char *directory);
+Bitcask *bc_open(const char *directory, uint32_t max_size);
 
-int bitcask_put(Bitcask*, Kv*);
-int bitcask_get(Bitcask*, Key*, Value*);
-void bitcask_close(Bitcask*);
+int bc_put(Bitcask*, Kv*);
+int bc_get(Bitcask*, Key*, Value*);
+void bc_print_keydir(Bitcask* bc);
+void bc_close(Bitcask*);
 
 #endif

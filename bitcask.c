@@ -14,13 +14,14 @@
 
 #define DATA ".data"
 #define ACTIVE ".active"
-#define MAX_SIZE 30
 
 struct Bitcask {
     char *directory;
     char *active_path;
     uint32_t max_id;
     int active_file;
+    Keydir *keydir;
+    uint32_t MAX_SIZE;
 };
 
 int get_next_file_id(const char *directory) {
@@ -61,21 +62,27 @@ char* path_append(char *path, char * suffix) {
 }
 
 char* get_data_path(Bitcask *bc, int id) {
-    size_t len = snprintf(NULL, 0, "%s/%s%d", bc->directory, DATA, id);
+    size_t len = snprintf(NULL, 0, "%s/%s%06d", bc->directory, DATA, id);
     char *output = malloc(len+1);
     if (!output) return NULL;
-    snprintf(output, len+1, "%s/%s%d", bc->directory, DATA, id);
+    snprintf(output, len+1, "%s/%s%06d", bc->directory, DATA, id);
     return output;
 }
 
-Bitcask *bitcask_open(const char *directory) {
+// void reconstruct_keydir(Bitcask *bc) {
+//     Keydir *kd = bc->keydir;
+//     DIR *dir = opendir(bc->directory);
+//     struct dirent *entry;
+// }
+
+Bitcask *bc_open(const char *directory, uint32_t max_size) {
     
     // note -- should I implement some max directory length check here,
     // since user may pass in a non-null terminated string? 
     struct stat sb;
     // Check if path exists 
     if (stat(directory, &sb) != 0) {
-        fprintf(stderr, "bitcask_open: cannot stat '%s': %s\n", 
+        fprintf(stderr, "bc_open: cannot stat '%s': %s\n", 
                         directory, strerror(errno));
         return NULL;
     }
@@ -103,19 +110,20 @@ Bitcask *bitcask_open(const char *directory) {
     char* active_path = path_append(bc->directory, ACTIVE);
     if (!active_path) {
         fprintf(stderr, "Failed to allocate memory for file path");
-        bitcask_close(bc);
+        bc_close(bc);
         return NULL;
     }
     int fd = open(active_path, O_RDWR | O_CREAT | O_APPEND, 0644);
     if (fd == -1) {
-        printf("here\n");
-        bitcask_close(bc);
+        bc_close(bc);
         return NULL;
     }
     bc->active_file = fd;
     bc->active_path = active_path;
     bc->max_id = get_next_file_id(bc->directory);
-
+    bc->keydir = keydir_create();
+    bc->MAX_SIZE = max_size;
+    //reconstruct_keydir(bc);    
     printf("Bitcask opened at: %s\n", directory);
     return bc;
 }
@@ -123,8 +131,8 @@ Bitcask *bitcask_open(const char *directory) {
 // Return -1 is error.
 // Return 0 is no error. Result stored in val. 
 // If key is not present, val is unchanged (user should pass in NULL.)
-int bitcask_get(Bitcask *bc, Key *key, Value *val) {
-    Metadata *m = keydir_get(key->key, key->key_len);
+int bc_get(Bitcask *bc, Key *key, Value *val) {
+    Metadata *m = keydir_get(bc->keydir, key->key, key->key_len);
     uint64_t offset = 4 + 4 + 2 + 4 + key->key_len;
     int fd = -1;
     int is_old_file = 0;
@@ -155,7 +163,7 @@ int bitcask_get(Bitcask *bc, Key *key, Value *val) {
     return 0;
 }
 
-int bitcask_put(Bitcask *bc, Kv* kv) {
+int bc_put(Bitcask *bc, Kv* kv) {
     uint8_t *buf;
     struct stat st;
     time_t now = time(NULL);
@@ -172,7 +180,7 @@ int bitcask_put(Bitcask *bc, Kv* kv) {
 
     // If the .active file is full, make it an immutable 
     // .data file and reset .active to an empty file. 
-    if (cur_size + len > MAX_SIZE) {
+    if (cur_size + len > bc->MAX_SIZE) {
         // rename .active to .dataN, for next N.
         char* data_path = get_data_path(bc, bc->max_id);
         rename(bc->active_path, data_path);
@@ -197,15 +205,24 @@ int bitcask_put(Bitcask *bc, Kv* kv) {
         .offset=offset, 
         .timestamp=now
     };
-    keydir_put(kv->key->key, kv->key->key_len, m);
+    keydir_put(bc->keydir, kv->key->key, kv->key->key_len, m);
     return 0;
 }
 
-void bitcask_close(Bitcask *bc) {
+void bc_print_keydir(Bitcask *bc) {
+    keydir_print(bc->keydir);
+}
+
+void bc_close(Bitcask *bc) {
     if (!bc) return;
+    // rename .active to immutable .data file.
+    char* data_path = get_data_path(bc, bc->max_id);
+    rename(bc->active_path, data_path);
+    free(data_path);
     free(bc->directory);
     close(bc->active_file);
     free(bc->active_path);
+    keydir_close(bc->keydir);
     printf("Bitcask closed\n");
     free(bc);
 }
