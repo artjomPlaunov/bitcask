@@ -24,7 +24,7 @@ void generate_key_value(size_t i, char *key, size_t klen, char **val, size_t *vl
 int main(void) {
     const char *dir = "./tests/test_2/data";
 
-    Bitcask *db = bc_open(dir, 100);
+    Bitcask *db = bc_open(dir, 200);
     if (!db) {
         fprintf(stderr, "Failed to open Bitcask\n");
         return 1;

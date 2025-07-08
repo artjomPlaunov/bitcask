@@ -8,8 +8,8 @@
 typedef struct Metadata {
     uint32_t file_id;
     uint32_t val_len;
-    uint64_t offset;
-    uint64_t timestamp;
+    uint32_t offset;
+    time_t timestamp;
 } Metadata;
 
 typedef struct Entry {

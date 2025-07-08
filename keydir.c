@@ -24,7 +24,7 @@ void keydir_print(Keydir *kd) {
         }
 
         printf("\nfile_id    : %u\n", entry->meta.file_id);
-        printf("offset     : %lu\n", entry->meta.offset);
+        printf("offset     : %u\n", entry->meta.offset);
         printf("val_len    : %u\n", entry->meta.val_len);
         printf("timestamp  : %lu\n", entry->meta.timestamp);
         printf("--------------------------------\n");

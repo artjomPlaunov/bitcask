@@ -13,7 +13,7 @@ typedef struct Key {
 
 typedef struct Value {
     uint8_t *val;
-    uint16_t val_len;
+    uint32_t val_len;
 } Value;
 
 typedef struct Kv {
@@ -23,6 +23,9 @@ typedef struct Kv {
 
 Kv *kv_create
 (const uint8_t *key, uint16_t key_len, const uint8_t *val, uint32_t val_len);
+
+void kv_print(Kv *kv);
+
 void kv_close(Kv *kv);
 
 uint32_t kv_serialize(Kv *kv, uint8_t **buf, time_t time);

@@ -23,7 +23,6 @@ int main(void) {
         assert(bc_put(db, kv) == 0);
         kv_close(kv);
     }
-
     bc_print_keydir(db);
     for (size_t i = 0; i < count; i++) {
         Key key = {.key = (uint8_t *)keys[i], .key_len = strlen(keys[i])};

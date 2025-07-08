@@ -144,6 +144,9 @@ int bc_get(Bitcask *bc, Key *key, Value *val) {
         perror("read failed");
         return -1;
     }
+    // TODO -- all read functions need to be be replaced to check 
+    // TODO -- for errors/incomplete reads. 
+
     // if we read from immutable data file, close fd. 
     if (is_old_file) {
         close(fd);
@@ -200,6 +203,35 @@ int bc_put(Bitcask *bc, Kv* kv) {
 void bc_print_keydir(Bitcask *bc) {
     keydir_print(bc->keydir);
 }
+
+
+void bc_print_files(Bitcask *bc) {
+    char *path = path_append(bc->directory, ".data000000");
+    printf("Printing .data000000\n");
+    printf("%s\n", path);
+    Scan *s = scan_init(path);
+    free(path);
+    
+    if (!s) {
+        printf("Failed to initialize scan\n");
+        return;
+    }
+
+    Kv *cur_kv = NULL;
+    time_t cur_ts;
+    int ret;
+    while ((ret = scan_next(s, &cur_kv, &cur_ts)) == 0) {
+        if (cur_kv == NULL) break;
+        kv_print(cur_kv);
+        kv_close(cur_kv);
+    }
+    
+    scan_close(s);
+}
+
+
+
+
 
 void bc_close(Bitcask *bc) {
     if (!bc) return;

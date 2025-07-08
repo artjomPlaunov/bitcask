@@ -15,6 +15,20 @@ kv_create(const uint8_t *key, uint16_t key_len, const uint8_t *val, uint32_t val
     memcpy(kv->val->val, val, val_len);
     return kv;
 }
+
+void kv_print(Kv *kv) {
+    printf("Key: ");
+    for (uint16_t i = 0; i < kv->key->key_len; i++) {
+        putchar(kv->key->key[i]);
+    }
+    printf(" | ");
+    printf("Value: ");
+    for (uint16_t i = 0; i < kv->val->val_len; i++) {
+        putchar(kv->val->val[i]);
+    }
+    printf("\n");
+}
+
 void kv_close(Kv *kv) {
     if (!kv) return;
     free(kv->key->key);
