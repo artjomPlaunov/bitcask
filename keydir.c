@@ -1,6 +1,4 @@
-#include "keydir.h"
-#include <string.h>
-#include <stdio.h>
+#include "include_all.h"
 
 Keydir *keydir_create(void) {
     Keydir *kd = malloc(sizeof(Keydir));

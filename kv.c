@@ -1,6 +1,4 @@
-#include <stdlib.h>
-#include <string.h>
-#include "kv.h"
+#include "include_all.h"
 
 Kv *
 kv_create(const uint8_t *key, uint16_t key_len, const uint8_t *val, uint32_t val_len) {

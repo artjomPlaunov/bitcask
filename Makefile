@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -std=c23 -Wall -Wextra -O0
 
-SRC = bitcask.c kv.c keydir.c
+SRC = bitcask.c kv.c keydir.c scan.c
 OBJ = $(SRC:.c=.o)
 
 TEST_SOURCES := $(wildcard tests/test_*/test.c)
