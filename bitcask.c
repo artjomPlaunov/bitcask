@@ -225,11 +225,8 @@ void bc_print_files(Bitcask *bc) {
         kv_print(cur_kv);
         kv_close(cur_kv);
     }
-    
     scan_close(s);
 }
-
-
 
 
 

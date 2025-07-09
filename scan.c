@@ -22,8 +22,8 @@ Scan *scan_init(const char* path) {
 }
 
 // Return -1 on error
-// Return 0 on success - next kv pair and timestamp are placed in kv and 
-//                       timestamp, respectively. kv is dynamically allocated
+// Return 0 on success - next kv pair and timestamp are placed in *kv and 
+//                       in *timestamp, respectively. kv is dynamically allocated
 //                       and the reference is placed in *kv. If we read all 
 //                       the records already, then *kv will hold a NULL pointer.
 int scan_next(Scan *s, Kv** kv, time_t* timestamp) {
@@ -70,7 +70,8 @@ int scan_next(Scan *s, Kv** kv, time_t* timestamp) {
     //  Only thing I can think of currently is a disk corruption: if a bit in the 
     // key or value len is corrupted, it could lead us to thinking a key or value 
     // is longer, and thus exceed the file size. Reading the key or value is done 
-    // before the CRC, so we don't know about the corruption yet. 
+    // before the CRC, so we don't know about the corruption yet, thus the check 
+    // is important. 
 
     // If there is a corrupted bit but there is still enough space to read 
     // longer/shorter (depending on corruption) values, then the CRC will detect 

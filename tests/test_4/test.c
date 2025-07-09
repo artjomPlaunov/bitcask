@@ -11,7 +11,6 @@ int main(void) {
         fprintf(stderr, "Failed to open Bitcask\n");
         return 1;
     }
-    db = bc_open("./tests/test_1/data", 100);
     bc_print_files(db);
     bc_close(db);
 
